@@ -1,23 +1,14 @@
-
-
 import os
-import json
-from bs4 import BeautifulSoup
-import requests
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-# import xlsxwriter
 import pandas as pd
-# from retrying import retry
 import datetime
-import xlwt
-import wmi
 from selenium.common.exceptions import NoSuchElementException
 import time
+import tkinter as tk
+from tkinter import *
 
 def buildDriver():
 
@@ -120,14 +111,42 @@ def exportExcel(df):
     writer.sheets['demo'].autofilter(0,0,0,len(col)-1)
 
     writer.save()
-    os.system("start EXCEL.EXE output.xlsx")
+    os.system("start EXCEL.EXE ./output/output.xlsx")
+
+
+def createWindow():
+    global docType
+    instructions = '  Use this tool to compile test logs.\n\n     1. Put the HTML log files in the logs folder.\n\n     2. Click OK.\n\n     The script creates a spreadsheet in the\n     output folder.'
+    root = Tk()
+
+    def Transform():
+        start_time = datetime.datetime.now()
+        browser = buildDriver()
+        first = True
+        df = folderCollect(browser,first)
+        exportExcel(df)
+        end_time = datetime.datetime.now()
+        print("Time:",end_time - start_time)
+        
+    root.geometry('400x500+250+50')
+    root.title('Test Log Compiler')
+
+    toolLabel = Label(root, justify=LEFT, text='Test Log Compiler', font=("Arial",12), height=2, width=200)
+    toolLabel.pack()
+    T = Label(root, text=instructions, height=14, width=40, bg='white', font=("Arial",9), relief=SUNKEN, bd=4, justify=LEFT)
+    T.pack()        
+    button = Button(root, text = 'Ok', command = Transform , width = 4, height = 2, fg = 'black' )
+    
+    button.pack(padx = 10, pady = 10)
+    
+    root.mainloop()
+
+
+
+
+
 
 if __name__ == '__main__':
     
-    start_time = datetime.datetime.now()
-    browser = buildDriver()
-    first = True
-    df = folderCollect(browser,first)
-    exportExcel(df)
-    end_time = datetime.datetime.now()
-    print("Time:",end_time - start_time)
+    createWindow()
+   
