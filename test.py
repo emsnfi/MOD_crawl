@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 import os
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
@@ -9,6 +10,9 @@ from selenium.common.exceptions import NoSuchElementException
 import time
 import tkinter as tk
 from tkinter import *
+import sys
+import threading
+from thread import*
 
 def buildDriver():
 
@@ -36,9 +40,11 @@ def folderCollect(browser,first):
 
             path = os.getcwd() + "/input/"+ file
             path = path.replace("\\", "/")
-            browser.get(path)
+            browser.get(path) # 當主執行緒
             platform = bios_version(browser)
             if first: 
+                # t1 = threading.Thread(target = thead,args=(browser,))
+                # t1.start()
                 headcol = thead(browser)
                 first = False
             alltable.extend(tbody(browser,platform))
@@ -99,7 +105,7 @@ def bios_version(browser):
     
 def exportExcel(df):
     localtime = time.localtime()
-    result = time.strftime("%Y-%m-%d%I:%M:%S%p", localtime)
+    # result = time.strftime("%Y-%m-%d%I:%M:%S%p", localtime)
     writer = pd.ExcelWriter("./output/output.xlsx") 
     df.to_excel(writer, sheet_name='demo', index=False, na_rep='NaN')
 
@@ -116,9 +122,10 @@ def exportExcel(df):
 
 def createWindow():
     global docType
-    instructions = '  Use this tool to compile test logs.\n\n     1. Put the HTML log files in the logs folder.\n\n     2. Click OK.\n\n     The script creates a spreadsheet in the\n     output folder.'
+    
+    instructions = '  Use this tool to compile test logs.\n\n     1. Put the HTML log files in the input folder.\n\n     2. Click OK.\n\n     The script creates a spreadsheet in the\n     output folder.'
     root = Tk()
-
+    # btn = Button(root, text='Start', command=changeText)  
     def Transform():
         start_time = datetime.datetime.now()
         browser = buildDriver()
@@ -127,17 +134,42 @@ def createWindow():
         exportExcel(df)
         end_time = datetime.datetime.now()
         print("Time:",end_time - start_time)
+
+    def changeText():
+        if(button['text']=='Start'):
+            button['text']='Stop'
+        else:
+            button['text']='Start'
+    def fun():
+        print("2323")
+    # def exit():
+    #     sys.exit("interrupt running") 
+    def threading1():
+
+       
+        t1 = threading.Thread(target=fun)
         
+        t1.start()
+        print(threading.get_ident())
+    start = False
     root.geometry('400x500+250+50')
     root.title('Test Log Compiler')
-
+    # t = threading.Thread(target=Transform)
     toolLabel = Label(root, justify=LEFT, text='Test Log Compiler', font=("Arial",12), height=2, width=200)
     toolLabel.pack()
     T = Label(root, text=instructions, height=14, width=40, bg='white', font=("Arial",9), relief=SUNKEN, bd=4, justify=LEFT)
-    T.pack()        
-    button = Button(root, text = 'Ok', command = Transform , width = 4, height = 2, fg = 'black' )
+    T.pack()   
+
+    
+    button = Button(root, text = 'Start', command=threading1, width = 8, height = 3, fg = 'black' )
+    # if start:
+    #     button = Button(root, text = 'Start', command=threading1(start) , width = 8, height = 3, fg = 'black' )
+    
+    # else:
+    #     button = Button(root, text = 'Stop', command=threading1(start) , width = 8, height = 3, fg = 'black' )
     
     button.pack(padx = 10, pady = 10)
+    
     
     root.mainloop()
 
