@@ -14,6 +14,7 @@ import sys
 import threading
 from thread import*
 import re
+import tkinter.font as font
 
 def buildDriver():
 
@@ -37,6 +38,7 @@ def folderCollect(browser,first,checkBox):
         headcol = []
         dirs = os.listdir('input')
         alltable = []
+        fileUrl = []
         for file in dirs:
             # the file will be one column
             path = os.getcwd() + "/input/"+ file
@@ -49,15 +51,31 @@ def folderCollect(browser,first,checkBox):
                 # t1.start()
                 headcol = thead(browser)
                 first = False
-            
-            alltable.extend(tbody(browser,platform,file,checkBox))
+            temp = tbody(browser,platform,file,checkBox)
+            length = len(temp)
+            tempurl = [file] * length
+            fileUrl.extend(tempurl)
+
+            alltable.extend(temp) # content
+
+            # alltable.extend(tbody(browser,platform,file,checkBox))
 
         df = pd.DataFrame(alltable,columns=headcol)
+        urlcol = ["url"]
+        fileUrl = pd.DataFrame(fileUrl,columns=urlcol)
+        df["File Name"] = fileUrl["url"].apply(lambda x: make_hyperlink(x))
         
+       
         return df
     else:
         os.mkdir('input')
-    
+
+def make_hyperlink(value):
+    # url = "https://custom.url/{}"
+    url = os.getcwd() + "/input/{}"
+    url = url.replace("\\", "/")
+    return '=HYPERLINK("%s", "%s")' % (url.format(value), value)
+  
 # thead thread
 def theadThread():
     the = MyThread(thead)
@@ -89,13 +107,16 @@ def thead(browser):
     temp.insert(2,"Platform") # BIOS 
     temp.insert(3,"Version") # version
     
-    temp.insert(6,"Energy change"+" % " +"of battery")
+    temp.insert(6,"Energy Change"+" % " +"of Battery")
     temp.insert(7,"Change Rate mW")
     
-    temp[5] = "Energy change mWh"
-    temp[9] = "SW drip %"
-    temp.insert(10,"HW drip %")
+    temp[5] = "Energy Change mWh"
+    temp[9] = "SW Drip %"
+    temp.insert(10,"HW Drip %")
     
+    temp[4] = "State"
+    temp[8] = "Change Rate"
+    temp[11] = "% Capacity Remaining at Start"
     
     return temp
 
@@ -173,7 +194,8 @@ def bios_version(browser):
         pass
     
     return bios,version
-    
+
+
 def exportExcel(df):
     # localtime = time.localtime()
     if not os.path.exists('output'):
@@ -216,7 +238,7 @@ def createWindow():
     startTrans = True
     stop_threads = False
     
-    instructions = '  Use this tool to compile test logs.\n\n     1. Put the HTML log files in the input folder.\n\n     2. Click OK.\n\n     The script creates a spreadsheet in the\n     output folder.'
+    instructions = '  Use this tool to report test logs.\n\n     1. Put the HTML log files in the input folder.\n\n     2. Click Start.\n\n  Wait a moment 😊 \n\n  Then, the report spreadsheet will be \n\n  automatically opened and saved in the\n\n  output folder.'
     root = Tk()
     # btn = Button(root, text='Start', command=changeText)  
     def Transform(checkBox):
@@ -247,6 +269,8 @@ def createWindow():
          checkBox = check.get()
          if(button['text']=='Start'):
             button['text']='Stop'
+           
+            button['bg'] = "#f7e4ee"
             t1 = MyThread(Transform,args=(checkBox,))
             # t1 = threading.Thread(target=) 
             
@@ -257,6 +281,7 @@ def createWindow():
             
             # terminate transform thread 
             # turn stop button to start
+            button['bg'] = "#e4f7ea"
             button['text']='Start'
 
     # def show():
@@ -265,27 +290,29 @@ def createWindow():
     # def getValue():
         # label.config( text = var1.get() )
 
-    root.geometry('400x500+250+50')
-    root.title('Test Log Compiler')
+    root.geometry('400x520+250+50')
+    root.title('Power Report')
     # t = threading.Thread(target=Transform)
-    toolLabel = Label(root, justify=LEFT, text='Test Log Compiler', font=("Arial",12), height=2, width=200)
+    toolLabel = Label(root, justify=LEFT, text='Power Report', font=("Arial",15), height=3, width=200)
     toolLabel.pack()
-    T = Label(root, text=instructions, height=14, width=40, bg='white', font=("Arial",9), relief=SUNKEN, bd=4, justify=LEFT)
+    T = Label(root, text=instructions, height=15, width=38, bg='white', font=("Arial",12), relief=SUNKEN, bd=4, justify=LEFT)
     T.pack()   
-
+    
+    myFont = font.Font(size=11)
     # show warning message when click stop button
     # root.messagebox.showwarning(title="Warning message", message="Do you really want to stop processing")
     check = IntVar() # checked is 1, non checked is 0
-    checkBtn = Checkbutton(root, text="Display only Sleep State", variable=check)
+    checkBtn = Checkbutton(root, text="Display only Sleep State", variable=check, height = 2)
     # checkBtn.grid(row=1, sticky=W) # cannot get it 
+    checkBtn["font"] = myFont
     checkBtn.pack(padx = 10,pady=10)
     # button = Button( root , text = "click Me" , command = show ).pack()
     # label = Label( root , text = " " )
     # label.pack()
-    
     # button = Button(root, text = 'Start', command= lambda:[changeText(),Transthreading()], width = 8, height = 3, fg = 'black' )
-    button = Button(root, text = 'Start', command=lambda: Transthreading(), width = 8, height = 3, fg = 'black' )
-    button.pack(padx = 15, pady = 15)
+    button = Button(root, text = 'Start', command=lambda: Transthreading(), width = 8, height = 2, fg = 'Black' ,bg="#e4f7ea")
+    button["font"] = myFont
+    button.pack(padx = 10, pady = 10)
 
     # button = Button(root, text = 'see value', command= Transthreading, width = 8, height = 3, fg = 'black' )
     # button.info
