@@ -15,6 +15,7 @@ import threading
 from thread import*
 import re
 import tkinter.font as font
+# from PIL import Image, ImageTk  
 
 def buildDriver():
 
@@ -31,7 +32,7 @@ def buildDriver():
 
 # obtain the folder 
 # return dataframe
-def folderCollect(browser,first,checkBox):
+def folderCollect(browser,first,checkBox,timeBox):
     
     if os.path.exists('input'):
 
@@ -51,7 +52,7 @@ def folderCollect(browser,first,checkBox):
                 # t1.start()
                 headcol = thead(browser)
                 first = False
-            temp = tbody(browser,platform,file,checkBox)
+            temp = tbody(browser,platform,file,checkBox,timeBox)
             length = len(temp)
             tempurl = [file] * length
             fileUrl.extend(tempurl)
@@ -92,7 +93,7 @@ def thead(browser):
         
         try:
         
-           if i not in [2,3]: # delete start time & duration
+           if i != 2: # only start time #not in [2,3]: # delete start time & duration
                 xpath = '//*[@id="summary-table"]/thead/tr/th['+ str(i) + ']'
                 thead.append(browser.find_element(By.XPATH,xpath).text)
             
@@ -107,16 +108,16 @@ def thead(browser):
     temp.insert(2,"Platform") # BIOS 
     temp.insert(3,"Version") # version
     
-    temp.insert(6,"Energy Change"+" % " +"of Battery")
-    temp.insert(7,"Change Rate mW")
+    temp.insert(7,"Energy Change"+" % " +"of Battery")
+    temp.insert(8,"Change Rate mW")
     
-    temp[5] = "Energy Change mWh"
-    temp[9] = "SW Drip %"
-    temp.insert(10,"HW Drip %")
-    
-    temp[4] = "State"
-    temp[8] = "Change Rate"
-    temp[11] = "% Capacity Remaining at Start"
+    temp[6] = "Energy Change mWh" #5
+    temp[10] = "SW Drip %" # 9
+    temp.insert(11,"HW Drip %") 
+    temp[4] = "Duration"
+    temp[5] = "State" # 4
+    temp[9] = "Change Rate" # 8
+    temp[12] = "% Capacity Remaining at Start" # 11
     
     return temp
 
@@ -129,7 +130,7 @@ def tbodyThread():
     return tbodyresult
 
 
-def tbody(browser,platform,fileName,checkBox):
+def tbody(browser,platform,fileName,checkBox,timeBox):
     tbody = []
     row = 1
     while True:
@@ -141,8 +142,14 @@ def tbody(browser,platform,fileName,checkBox):
             if checkBox ==1 and rowlist[3] != "Sleep":
                 row +=1
                 continue
-                
-            print("Sleep",rowlist)
+            if timeBox ==1: # need to check whether above 30 mins
+                dur = rowlist[2].split(":")
+                dur = list(map(int,dur))
+                if dur[0] <= 0:
+                    if dur[1] < 30:
+                        row+=1
+                        continue
+            print(rowlist)
             # 	% LOW POWER STATE TIME is divided into sw drip, hw drip
             if len(rowlist) < 11:
                 rowlist.insert(9,"-")
@@ -167,11 +174,14 @@ def filter(rowlist):
     
 
     rowlist.pop(4) # delete start time column data
-    rowlist.pop(4) # delete duration column data
+    # rowlist.pop(4) # delete duration column data
 
     # delete the unit except for the last column 5 6 8 9 
-    for i in [5,6,7,9,10]:
-        rowlist[i] = re.sub("\D","",rowlist[i])
+    for i in [6,7,8,10,11]: #[5,6,7,9,10]:
+        
+        if rowlist[i] != "-": # 不為空的話 就轉
+            rowlist[i] = re.sub("\D","",rowlist[i])
+            rowlist[i] = int(rowlist[i])
 
 
     return rowlist
@@ -241,11 +251,11 @@ def createWindow():
     instructions = '  Use this tool to report test logs.\n\n     1. Put the HTML log files in the input folder.\n\n     2. Click Start.\n\n  Wait a moment 😊 \n\n  Then, the report spreadsheet will be \n\n  automatically opened and saved in the\n\n  output folder.'
     root = Tk()
     # btn = Button(root, text='Start', command=changeText)  
-    def Transform(checkBox):
+    def Transform(checkBox,timeBox):
         start_time = datetime.datetime.now()
         browser = buildDriver()
         first = True
-        df = folderCollect(browser,first,checkBox)
+        df = folderCollect(browser,first,checkBox,timeBox)
         exportExcel(df)
         end_time = datetime.datetime.now()
         changeText()
@@ -254,24 +264,31 @@ def createWindow():
         startTrans = True
 
     def changeText(): # change button content
-        if(button['text']=='Start'):
-            button['text']='Stop'
+        print(photoStop)
+        if(button['image']=="pyimage1"):
+            # button['text']='Stop'
+            # button['bg'] = "#f7e4ee"
+            button['image'] = photoStop
         else:
-            button['text']='Start'
+            # button['text']='Start'
+            # button['bg'] = "#e4f7ea"
+            button['image'] = photoStart
     
     
     def Transthreading():
-
+         
         # Two condition:
         # when start -> start the thread
         # when stop -> stop (terminate) the thread
-
+         
          checkBox = check.get()
-         if(button['text']=='Start'):
-            button['text']='Stop'
+         timeBox = timeCheck.get()
+         if(button['image']=="pyimage1"):
+            button['image'] = photoStop
+            # button['text']='Stop'
            
-            button['bg'] = "#f7e4ee"
-            t1 = MyThread(Transform,args=(checkBox,))
+            # button['bg'] = "#f7e4ee"
+            t1 = MyThread(Transform,args=(checkBox,timeBox))
             # t1 = threading.Thread(target=) 
             
             t1.start()
@@ -281,9 +298,9 @@ def createWindow():
             
             # terminate transform thread 
             # turn stop button to start
-            button['bg'] = "#e4f7ea"
-            button['text']='Start'
-
+            # button['bg'] = "#e4f7ea"
+            # button['text']='Start'
+            button['image'] = photoStart
     # def show():
     #     label.config( text = var1.get() )
     
@@ -295,25 +312,56 @@ def createWindow():
     # t = threading.Thread(target=Transform)
     toolLabel = Label(root, justify=LEFT, text='Power Report', font=("Arial",15), height=3, width=200)
     toolLabel.pack()
+    # toolLabel.grid()
     T = Label(root, text=instructions, height=15, width=38, bg='white', font=("Arial",12), relief=SUNKEN, bd=4, justify=LEFT)
     T.pack()   
-    
+    # T.grid()
     myFont = font.Font(size=11)
     # show warning message when click stop button
     # root.messagebox.showwarning(title="Warning message", message="Do you really want to stop processing")
     check = IntVar() # checked is 1, non checked is 0
-    checkBtn = Checkbutton(root, text="Display only Sleep State", variable=check, height = 2)
-    # checkBtn.grid(row=1, sticky=W) # cannot get it 
+    """filter only sleep state"""
+    checkBtn = Checkbutton(root, justify=LEFT,text="Display only Sleep State",	
+    variable=check, height = 1)
+    
     checkBtn["font"] = myFont
-    checkBtn.pack(padx = 10,pady=10)
+    checkBtn.pack(padx = 5,pady=7)
+    # checkBtn.grid(row=1, sticky=W) # cannot get it 
+
+    """filter 30min"""
+    timeCheck = IntVar() # checked is 1, non checked is 0
+    timeCheckbtn = Checkbutton(root, text="Display duration 30mins and above", variable=timeCheck, height = 1)
+    # checkBtn.grid(row=1, sticky=W) # cannot get it 
+    timeCheckbtn["font"] = myFont
+    timeCheckbtn.pack(padx = 5,pady=7)
+
+
+    
+
+
     # button = Button( root , text = "click Me" , command = show ).pack()
     # label = Label( root , text = " " )
     # label.pack()
     # button = Button(root, text = 'Start', command= lambda:[changeText(),Transthreading()], width = 8, height = 3, fg = 'black' )
-    button = Button(root, text = 'Start', command=lambda: Transthreading(), width = 8, height = 2, fg = 'Black' ,bg="#e4f7ea")
-    button["font"] = myFont
-    button.pack(padx = 10, pady = 10)
+    
+    photoStart=tk.PhotoImage(file=r'C:\Users\linhs\Desktop\MOD_em\midstart.png')
+    photoStop=tk.PhotoImage(file=r'C:\Users\linhs\Desktop\MOD_em\midstop.png')
+    button=tk.Button(root,image=photoStart,compound='left',bd=0,command=lambda: Transthreading())
+    # button=tk.Button(root,image=photoStart,compound='left',bd=0,command=lambda: Transthreading())
+    
+    button.pack(padx = 3,pady=9)
 
+    # button.grid()
+
+    # button = Button(root, text = 'Start', command=lambda: Transthreading(),bd=3, width = 6, height = 1, fg = 'Black' ,bg="#e4f7ea")
+    # button["font"] = myFont
+    # button.pack(padx = 7, pady = 7)
+#     imgBtn = PhotoImage(file=r"C:\Users\linhs\Desktop\MOD_em\start.png")
+#   # Create button and image
+#     img  = Button(root, image=imgBtn,width=20)
+
+
+    # img.pack()
     # button = Button(root, text = 'see value', command= Transthreading, width = 8, height = 3, fg = 'black' )
     # button.info
     # if start:
